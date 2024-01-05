@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"debug/elf"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -163,6 +164,22 @@ func (e *QueryEngine) ensure() (string, error) {
 		// TODO log instructions on how to fix this problem
 		return "", fmt.Errorf("no binary found")
 	}
+
+	elfFile, err := elf.Open(file)
+	if err != nil {
+		return "", fmt.Errorf("cannot open file: %s %w", file, err)
+	}
+
+	const ptrSize = 32 << uintptr(^uintptr(0)>>63)
+
+	switch {
+	case elfFile.Class == elf.ELFCLASS64 && ptrSize == 32:
+		return "", fmt.Errorf("system check failed: 64 bit query engine cannot be used on 32 bit systems")
+	case elfFile.Class == elf.ELFCLASS32 && ptrSize == 64:
+		return "", fmt.Errorf("system check failed: 32 bit query engine cannot be used on 64 bit systems")
+	}
+
+	logger.Debug.Printf("%d bit system and %s elf", ptrSize, elfFile.Class)
 
 	startVersion := time.Now()
 	out, err := exec.Command(file, "--version").Output()
