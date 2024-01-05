@@ -169,6 +169,7 @@ func (e *QueryEngine) ensure() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("cannot open file: %s %w", file, err)
 	}
+	defer elfFile.Close()
 
 	const ptrSize = 32 << uintptr(^uintptr(0)>>63)
 
